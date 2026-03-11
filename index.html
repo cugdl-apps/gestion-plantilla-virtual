@@ -11,6 +11,8 @@
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
     
     <style>
         [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
@@ -227,39 +229,21 @@
             $scope.correoUsuario = "";
             $scope.errorLogin = null;
 
-// --- PROCESAMIENTO DEL LOGIN BLINDADO ---
+            // --- PROCESAMIENTO DEL LOGIN CON LIBRERÍA OFICIAL ---
             window.handleCredentialResponse = function(response) {
-                console.log("1. Token recibido de Google:", response);
+                console.log("1. Respuesta recibida de Google");
 
-                // Evitamos que crashee si Google manda un evento intermedio sin credencial
-                if (!response || !response.credential) {
-                    console.log("Evento ignorado: No hay credencial.");
-                    return;
-                }
+                if (!response || !response.credential) return;
 
                 try {
-                    // Decodificación directa forzando el formato String para evitar el TypeError
-                    const token = String(response.credential);
-                    const partes = token.split('.');
-                    
-                    if (partes.length !== 3) {
-                        throw new Error("El token no tiene el formato correcto.");
-                    }
+                    // Magia: La librería hace todo el trabajo pesado en 1 sola línea
+                    const data = jwt_decode(response.credential);
+                    console.log("2. Datos extraídos correctamente:", data);
 
-                    // Forzamos explícitamente a String antes de usar .replace()
-                    let base64Url = String(partes);
-                    let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                    
-                    let jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                    }).join(''));
-                    
-                    const data = JSON.parse(jsonPayload);
                     const email = data.email || "";
-                    console.log("2. Correo decodificado:", email);
 
                     // VALIDACIÓN DE DOMINIO: Aceptamos CUGDL y la red UdeG
-                    if(email.endsWith("@cugdl.udg.mx") || email.endsWith("@gmail.com")) {
+                    if(email.endsWith("@cugdl.udg.mx") || email.endsWith("@udg.mx") || email.endsWith("@alumnos.udg.mx") || email.endsWith("@gmail.com")) {
                         
                         $timeout(function() {
                             $scope.usuarioAutenticado = true;
@@ -276,7 +260,7 @@
                         });
                     }
                 } catch (err) {
-                    console.error("Error crítico al procesar la cuenta:", err);
+                    console.error("Error al usar jwt-decode:", err);
                     $timeout(function() {
                         $scope.errorLogin = "Error técnico al leer tu cuenta. Intenta de nuevo.";
                     });
