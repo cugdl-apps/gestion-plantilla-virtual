@@ -237,22 +237,39 @@
             }
 
             window.handleCredentialResponse = function(response) {
-                const data = parseJwt(response.credential);
-                const email = data.email;
+                console.log("1. Respuesta de Google recibida:", response);
+                
+                try {
+                    const data = parseJwt(response.credential);
+                    console.log("2. Datos decodificados:", data);
+                    
+                    const email = data.email || "";
+                    console.log("3. Correo detectado:", email);
 
-                // VALIDACIÓN DE DOMINIO: Aceptamos correos del CUGDL y la red UdeG
-                if(email.endsWith("@cugdl.udg.mx") || email.endsWith("@gmail.com")) {
-                    $scope.$apply(function() {
-                        $scope.usuarioAutenticado = true;
-                        $scope.correoUsuario = email;
-                        $scope.errorLogin = null;
+                    // VALIDACIÓN DE DOMINIO
+                    if(email.endsWith("@cugdl.udg.mx") || email.endsWith("@gmail.com")) {
                         
-                        // Cargamos los datos de Drive solo después de loguearse exitosamente
-                        $scope.cargarRegistros();
-                    });
-                } else {
-                    $scope.$apply(function() {
-                        $scope.errorLogin = "Acceso denegado. Utiliza una cuenta @cugdl.udg.mx";
+                        // Usamos $timeout en lugar de $apply para evitar errores de ciclo de Angular
+                        $timeout(function() {
+                            $scope.usuarioAutenticado = true;
+                            $scope.correoUsuario = email;
+                            $scope.errorLogin = null;
+                            console.log("4. Autenticación exitosa. Cambiando pantalla y cargando Drive...");
+                            
+                            $scope.cargarRegistros();
+                        });
+
+                    } else {
+                        $timeout(function() {
+                            // Ahora te mostrará en pantalla exactamente qué correo rebotó
+                            $scope.errorLogin = "Acceso denegado para: " + email + ". Utiliza una cuenta válida.";
+                            console.log("4. Acceso denegado.");
+                        });
+                    }
+                } catch (err) {
+                    console.error("Error crítico al procesar el login:", err);
+                    $timeout(function() {
+                        $scope.errorLogin = "Ocurrió un error al procesar tu cuenta. Revisa la consola.";
                     });
                 }
             };
