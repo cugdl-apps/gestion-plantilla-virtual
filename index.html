@@ -240,7 +240,7 @@
                 const data = parseJwt(response.credential);
                 const email = data.email;
 
-                // VALIDACIÓN DE DOMINIO: Asegura que el correo sea válido
+                // VALIDACIÓN DE DOMINIO: Aceptamos correos del CUGDL y la red UdeG
                 if(email.endsWith("@cugdl.udg.mx") || email.endsWith("@gmail.com")) {
                     $scope.$apply(function() {
                         $scope.usuarioAutenticado = true;
@@ -252,7 +252,7 @@
                     });
                 } else {
                     $scope.$apply(function() {
-                        $scope.errorLogin = "Acceso denegado. Utiliza una cuenta institucional válida.";
+                        $scope.errorLogin = "Acceso denegado. Utiliza una cuenta @cugdl.udg.mx";
                     });
                 }
             };
