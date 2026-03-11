@@ -4,202 +4,272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>PA 2026B - Modalidad Virtual</title>
 
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <style>
+        [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
+            display: none !important;
+        }
+    </style>
 </head>
 
 <body class="bg-gray-100" ng-controller="MainController">
 
-    <header class="bg-white shadow-md mb-6">
-        <div class="max-w-6xl mx-auto flex items-center gap-4 p-4">
-            <img src="CUGDL.png" class="h-14">
-            <div>
-                <h1 class="text-xl font-bold text-gray-800">Centro Universitario de Guadalajara</h1>
-                <p class="text-gray-600">Módulo de Gestión de Secciones y Plantilla 2026B (Virtual)</p>
+    <div ng-show="!usuarioAutenticado" class="min-h-screen flex items-center justify-center bg-gray-200">
+        <div class="bg-white p-10 rounded-lg shadow-xl text-center max-w-md w-full">
+            <div class="flex justify-center gap-4 mb-6">
+                <img src="UDG.png" class="h-16" alt="UDG">
+                <img src="CUGDL.png" class="h-16" alt="CUGDL">
             </div>
-        </div>
-    </header>
-
-    <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-lg">
-
-        <div ng-if="alerta"
-            class="p-3 mb-4 rounded text-white"
-            ng-class="{'bg-red-500': alerta.tipo=='error','bg-green-500': alerta.tipo=='success'}">
-            {{alerta.mensaje}}
-        </div>
-
-        <div class="grid md:grid-cols-2 gap-4">
-
-            <div>
-                <label class="font-semibold">Clave Materia</label>
-                <input type="text" ng-model="form.CLAVE" ng-change="buscarMateria()" class="w-full border rounded p-2 uppercase">
-            </div>
-
-            <div>
-                <label class="font-semibold">Materia</label>
-                <input type="text" ng-model="form.MATERIA" readonly class="w-full border rounded p-2 bg-gray-100">
-            </div>
-
-            <div>
-                <label class="font-semibold">Departamento</label>
-                <input type="text" ng-model="form.DEPARTAMENTO" readonly class="w-full border rounded p-2 bg-gray-100">
-            </div>
-
-            <div>
-                <label class="font-semibold">Carga Horaria Semanal</label>
-                <input type="text" ng-model="form.CARGA" readonly class="w-full border rounded p-2 bg-gray-100">
-            </div>
-
-            <div class="md:col-span-2 mt-2">
-                <label class="font-semibold block mb-2">Programa Educativo</label>
-                <div class="flex flex-wrap gap-4 bg-gray-50 p-3 border rounded">
-                    <label ng-repeat="p in programasPermitidos" class="cursor-pointer flex items-center gap-2">
-                        <input type="radio" ng-model="form.PROGRAMA" ng-value="p" class="w-4 h-4 text-blue-600">
-                        <span class="font-medium">{{p}}</span>
-                    </label>
-                </div>
-            </div>
-
-            <div>
-                <label class="font-semibold">Semestre</label>
-                <select ng-model="form.SEMESTRE" class="w-full border rounded p-2">
-                    <option value="">Seleccionar</option>
-                    <option ng-repeat="s in semestres">{{s}}</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="font-semibold">Cantidad de Secciones</label>
-                <select ng-model="form.SECCIONES" class="w-full border rounded p-2">
-                    <option value="">Seleccionar</option>
-                    <option ng-repeat="n in secciones">{{n}}</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="font-semibold">Cupos</label>
-                <select ng-model="form.CUPOS" class="w-full border rounded p-2">
-                    <option value="">Seleccionar</option>
-                    <option ng-repeat="c in cupos">{{c}}</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="font-semibold">Modalidad del Curso</label>
-                <input type="text" ng-model="form.MODALIDAD" readonly class="w-full border rounded p-2 bg-gray-200 text-gray-700 cursor-not-allowed">
-            </div>
-
-            <div class="md:col-span-2 mt-2">
-                <label class="font-semibold">Comentarios</label>
-                <textarea ng-model="form.COMENTARIOS" class="w-full border rounded p-2" rows="2" placeholder="Opcional..."></textarea>
-            </div>
-
-        </div>
-
-        <div class="mt-6 flex flex-wrap gap-4">
-            <button ng-click="registrar()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded">Registrar Secciones</button>
-            <button ng-click="cancelar()" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-6 py-2 rounded">Limpiar Formulario</button>
-            <button ng-click="exportarExcel()" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded">Exportar a Excel</button>
-        </div>
-    </div>
-
-    <div class="max-w-6xl mx-auto mt-6 bg-white p-4 shadow rounded">
-
-        <div class="flex justify-center mb-6 space-x-2 bg-gray-100 p-1 rounded-lg w-fit mx-auto border border-gray-200">
-            <button ng-click="vistaActiva = 'resumen'" 
-                    ng-class="vistaActiva == 'resumen' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:bg-gray-200'" 
-                    class="px-6 py-2 rounded-md font-semibold transition-all">
-                Resumen y Gráficos
-            </button>
-            <button ng-click="vistaActiva = 'tabla'" 
-                    ng-class="vistaActiva == 'tabla' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:bg-gray-200'" 
-                    class="px-6 py-2 rounded-md font-semibold transition-all">
-                Ver Registros ({{registros.length}})
-            </button>
-        </div>
-
-        <div ng-show="vistaActiva == 'resumen'">
-            <div class="grid md:grid-cols-3 gap-6">
-                <div class="md:col-span-1 overflow-x-auto">
-                    <h2 class="font-bold text-gray-700 mb-2 text-center">Datos por Programa</h2>
-                    <table class="w-full border table-auto text-sm text-center">
-                        <thead class="bg-blue-50">
-                            <tr>
-                                <th class="px-3 py-2 border font-semibold">Programa</th>
-                                <th class="px-3 py-2 border font-semibold">Secciones</th>
-                                <th class="px-3 py-2 border font-semibold">Total Cupos</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr ng-repeat="item in resumenDatos" class="border-t odd:bg-white even:bg-gray-50">
-                                <td class="px-3 py-2 font-bold text-blue-700">{{item.programa}}</td>
-                                <td class="px-3 py-2">{{item.secciones}}</td>
-                                <td class="px-3 py-2">{{item.cupos}}</td>
-                            </tr>
-                            <tr class="bg-gray-200 font-bold border-t">
-                                <td class="px-3 py-2">TOTAL</td>
-                                <td class="px-3 py-2">{{totalSeccionesResumen}}</td>
-                                <td class="px-3 py-2">{{totalCuposResumen}}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="md:col-span-1">
-                    <canvas id="chartSecciones"></canvas>
-                </div>
-
-                <div class="md:col-span-1">
-                    <canvas id="chartCupos"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div ng-show="vistaActiva == 'tabla'" class="overflow-x-auto flex flex-col h-full">
-            <div class="mb-2 text-sm text-gray-500 italic text-center">
-                Mostrando página {{paginaActual}} de {{totalPaginas || 1}} ({{registros.length}} registros totales).
-            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+            <p class="text-gray-600 mb-8">Inicia sesión con tu correo institucional para acceder al Módulo de Plantilla 2026B.</p>
             
-            <table class="w-full border table-auto text-sm">
-                <thead class="bg-gray-200 sticky top-0">
-                    <tr>
-                        <th ng-repeat="col in columnas" class="px-3 py-2 text-left font-semibold">{{col}}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr ng-repeat="r in registros | limitTo: registrosPorPagina : (paginaActual - 1) * registrosPorPagina" class="odd:bg-white even:bg-gray-50 border-t">
-                        <td ng-repeat="col in columnas" class="px-3 py-2">{{r[col]}}</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div id="googleButtonDiv" class="flex justify-center"></div>
+            
+            <div ng-if="errorLogin" class="mt-4 p-3 bg-red-100 text-red-700 rounded text-sm font-semibold">
+                {{errorLogin}}
+            </div>
+        </div>
+    </div>
 
-            <div class="flex justify-between items-center mt-4 bg-gray-50 p-2 rounded border">
-                <button ng-click="paginaAnterior()" 
-                        ng-disabled="paginaActual == 1" 
-                        class="px-4 py-2 bg-white border rounded text-blue-600 font-semibold hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                    &laquo; Anterior
-                </button>
-                <span class="font-semibold text-gray-700">Página {{paginaActual}} de {{totalPaginas || 1}}</span>
-                <button ng-click="paginaSiguiente()" 
-                        ng-disabled="paginaActual >= totalPaginas" 
-                        class="px-4 py-2 bg-white border rounded text-blue-600 font-semibold hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Siguiente &raquo;
-                </button>
+    <div ng-show="usuarioAutenticado" ng-cloak>
+        
+        <header class="bg-white shadow-md mb-6">
+            <div class="max-w-6xl mx-auto flex items-center justify-between p-4">
+                <div class="flex items-center gap-4">
+                    <img src="CUGDL.png" class="h-14" alt="CUGDL">
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800">Centro Universitario de Guadalajara</h1>
+                        <p class="text-gray-600">Módulo de Gestión de Secciones y Plantilla 2026B (Virtual)</p>
+                    </div>
+                </div>
+                <div class="text-right text-sm bg-blue-50 p-2 rounded border border-blue-100 hidden md:block">
+                    <p class="text-gray-500">Sesión activa:</p>
+                    <p class="font-bold text-blue-700">{{correoUsuario}}</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+
+            <div ng-if="alerta"
+                class="p-3 mb-4 rounded text-white font-semibold"
+                ng-class="{'bg-red-500': alerta.tipo=='error','bg-green-500': alerta.tipo=='success'}">
+                {{alerta.mensaje}}
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label class="font-semibold">Clave Materia</label>
+                    <input type="text" ng-model="form.CLAVE" ng-change="buscarMateria()" class="w-full border rounded p-2 uppercase">
+                </div>
+                <div>
+                    <label class="font-semibold">Materia</label>
+                    <input type="text" ng-model="form.MATERIA" readonly class="w-full border rounded p-2 bg-gray-100">
+                </div>
+                <div>
+                    <label class="font-semibold">Departamento</label>
+                    <input type="text" ng-model="form.DEPARTAMENTO" readonly class="w-full border rounded p-2 bg-gray-100">
+                </div>
+                <div>
+                    <label class="font-semibold">Carga Horaria Semanal</label>
+                    <input type="text" ng-model="form.CARGA" readonly class="w-full border rounded p-2 bg-gray-100">
+                </div>
+
+                <div class="md:col-span-2 mt-2">
+                    <label class="font-semibold block mb-2">Programa Educativo</label>
+                    <div class="flex flex-wrap gap-4 bg-gray-50 p-3 border rounded">
+                        <label ng-repeat="p in programasPermitidos" class="cursor-pointer flex items-center gap-2">
+                            <input type="radio" ng-model="form.PROGRAMA" ng-value="p" class="w-4 h-4 text-blue-600">
+                            <span class="font-medium">{{p}}</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="font-semibold">Semestre</label>
+                    <select ng-model="form.SEMESTRE" class="w-full border rounded p-2">
+                        <option value="">Seleccionar</option>
+                        <option ng-repeat="s in semestres">{{s}}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="font-semibold">Cantidad de Secciones</label>
+                    <select ng-model="form.SECCIONES" class="w-full border rounded p-2">
+                        <option value="">Seleccionar</option>
+                        <option ng-repeat="n in secciones">{{n}}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="font-semibold">Cupos</label>
+                    <select ng-model="form.CUPOS" class="w-full border rounded p-2">
+                        <option value="">Seleccionar</option>
+                        <option ng-repeat="c in cupos">{{c}}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="font-semibold">Modalidad del Curso</label>
+                    <input type="text" ng-model="form.MODALIDAD" readonly class="w-full border rounded p-2 bg-gray-200 text-gray-700 cursor-not-allowed">
+                </div>
+
+                <div class="md:col-span-2 mt-2">
+                    <label class="font-semibold">Comentarios</label>
+                    <textarea ng-model="form.COMENTARIOS" class="w-full border rounded p-2" rows="2" placeholder="Opcional..."></textarea>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-wrap gap-4">
+                <button ng-click="registrar()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded">Registrar Secciones</button>
+                <button ng-click="cancelar()" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-6 py-2 rounded">Limpiar Formulario</button>
+                <button ng-click="limpiarTabla()" class="hidden bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-2 rounded">Limpiar Tabla</button>
+                <button ng-click="exportarExcel()" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded">Exportar a Excel</button>
             </div>
         </div>
 
+        <div class="max-w-6xl mx-auto mt-6 bg-white p-4 shadow rounded">
+
+            <div class="flex justify-center mb-6 space-x-2 bg-gray-100 p-1 rounded-lg w-fit mx-auto border border-gray-200">
+                <button ng-click="vistaActiva = 'resumen'" 
+                        ng-class="vistaActiva == 'resumen' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:bg-gray-200'" 
+                        class="px-6 py-2 rounded-md font-semibold transition-all">
+                    Resumen y Gráficos
+                </button>
+                <button ng-click="vistaActiva = 'tabla'" 
+                        ng-class="vistaActiva == 'tabla' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:bg-gray-200'" 
+                        class="px-6 py-2 rounded-md font-semibold transition-all">
+                    Ver Registros ({{registros.length}})
+                </button>
+            </div>
+
+            <div ng-show="vistaActiva == 'resumen'">
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="md:col-span-1 overflow-x-auto">
+                        <h2 class="font-bold text-gray-700 mb-2 text-center">Datos por Programa</h2>
+                        <table class="w-full border table-auto text-sm text-center">
+                            <thead class="bg-blue-50">
+                                <tr>
+                                    <th class="px-3 py-2 border font-semibold">Programa</th>
+                                    <th class="px-3 py-2 border font-semibold">Secciones</th>
+                                    <th class="px-3 py-2 border font-semibold">Total Cupos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="item in resumenDatos" class="border-t odd:bg-white even:bg-gray-50">
+                                    <td class="px-3 py-2 font-bold text-blue-700">{{item.programa}}</td>
+                                    <td class="px-3 py-2">{{item.secciones}}</td>
+                                    <td class="px-3 py-2">{{item.cupos}}</td>
+                                </tr>
+                                <tr class="bg-gray-200 font-bold border-t">
+                                    <td class="px-3 py-2">TOTAL</td>
+                                    <td class="px-3 py-2">{{totalSeccionesResumen}}</td>
+                                    <td class="px-3 py-2">{{totalCuposResumen}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="md:col-span-1"><canvas id="chartSecciones"></canvas></div>
+                    <div class="md:col-span-1"><canvas id="chartCupos"></canvas></div>
+                </div>
+            </div>
+
+            <div ng-show="vistaActiva == 'tabla'" class="overflow-x-auto flex flex-col h-full">
+                <div class="mb-2 text-sm text-gray-500 italic text-center">
+                    Mostrando página {{paginaActual}} de {{totalPaginas || 1}} ({{registros.length}} registros totales).
+                </div>
+                
+                <table class="w-full border table-auto text-sm">
+                    <thead class="bg-gray-200 sticky top-0">
+                        <tr>
+                            <th ng-repeat="col in columnas" class="px-3 py-2 text-left font-semibold">{{col}}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="r in registros | limitTo: registrosPorPagina : (paginaActual - 1) * registrosPorPagina" class="odd:bg-white even:bg-gray-50 border-t">
+                            <td ng-repeat="col in columnas" class="px-3 py-2">{{r[col]}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="flex justify-between items-center mt-4 bg-gray-50 p-2 rounded border">
+                    <button ng-click="paginaAnterior()" ng-disabled="paginaActual == 1" class="px-4 py-2 bg-white border rounded text-blue-600 font-semibold hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">&laquo; Anterior</button>
+                    <span class="font-semibold text-gray-700">Página {{paginaActual}} de {{totalPaginas || 1}}</span>
+                    <button ng-click="paginaSiguiente()" ng-disabled="paginaActual >= totalPaginas" class="px-4 py-2 bg-white border rounded text-blue-600 font-semibold hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">Siguiente &raquo;</button>
+                </div>
+            </div>
+
+        </div>
+
+        <footer class="text-center mt-10 p-6 text-gray-600">
+            <div class="flex justify-center gap-6 mb-3">
+                <img src="UDG.png" class="h-12"><img src="CUGDL.png" class="h-12">
+            </div>
+            <p class="font-semibold">Universidad de Guadalajara</p>
+            <p>CUGDL</p>
+            <p class="text-sm mt-2">Propuesta desarrollada por Rafel Flores y Jonathan López | CUGDL</p>
+        </footer>
     </div>
+
+    <iframe name="hiddenFrame" style="display:none;"></iframe>
 
     <script>
         var app = angular.module("appMaterias", []);
 
         app.controller("MainController", function ($scope, $http, $timeout) {
 
+            // --- LÓGICA DE AUTENTICACIÓN GOOGLE ---
+            $scope.usuarioAutenticado = false;
+            $scope.correoUsuario = "";
+            $scope.errorLogin = null;
+
+            function parseJwt(token) {
+                var base64Url = token.split('.');
+                var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                var jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            }
+
+            window.handleCredentialResponse = function(response) {
+                const data = parseJwt(response.credential);
+                const email = data.email;
+
+                // VALIDACIÓN DE DOMINIO: Asegura que el correo sea válido
+                if(email.endsWith("@cugdl.udg.mx") || email.endsWith("@gmail.com")) {
+                    $scope.$apply(function() {
+                        $scope.usuarioAutenticado = true;
+                        $scope.correoUsuario = email;
+                        $scope.errorLogin = null;
+                        
+                        // Cargamos los datos de Drive solo después de loguearse exitosamente
+                        $scope.cargarRegistros();
+                    });
+                } else {
+                    $scope.$apply(function() {
+                        $scope.errorLogin = "Acceso denegado. Utiliza una cuenta institucional válida.";
+                    });
+                }
+            };
+
+            window.onload = function () {
+                google.accounts.id.initialize({
+                    // PON AQUÍ TU CLIENT ID OBTENIDO DE GOOGLE CLOUD CONSOLE
+                    client_id: "918717903490-c11rpq9l7g8hq9phln457no1j379bsf5.apps.googleusercontent.com", 
+                    callback: handleCredentialResponse
+                });
+                google.accounts.id.renderButton(
+                    document.getElementById("googleButtonDiv"),
+                    { theme: "outline", size: "large", width: 300 }
+                );
+            };
+
+            // --- VARIABLES PRINCIPALES ---
             $scope.programasPermitidos = ["LAO", "LBGC", "LDE", "LGC", "LCDP", "LPD", "LSC"];
             $scope.secciones = Array.from({ length: 20 }, (_, i) => i + 1);
             $scope.cupos = Array.from({ length: 35 }, (_, i) => i + 1);
@@ -212,7 +282,7 @@
             $scope.vistaActiva = 'resumen'; 
             $scope.resumenDatos = [];
 
-            // VARIABLES DE PAGINACIÓN
+            // Paginación
             $scope.paginaActual = 1;
             $scope.registrosPorPagina = 10;
             $scope.totalPaginas = 1;
@@ -220,14 +290,17 @@
             var chartSec = null;
             var chartCup = null;
 
+            // Mostramos "REGISTRADO_POR" en la tabla del frontend para control interno
             $scope.columnas = [
-                "IDENTIFICADOR", "CLAVE", "MATERIA", "PROGRAMA", "SEMESTRE", "CUPOS", "MODALIDAD", "COMENTARIOS"
+                "IDENTIFICADOR", "CLAVE", "MATERIA", "PROGRAMA", "SEMESTRE", "CUPOS", "MODALIDAD", "REGISTRADO_POR"
             ];
 
+            // Carga Catálogo
             $http.get("catalogo.json").then(function (res) {
                 $scope.catalogo = res.data;
             });
 
+            // --- FUNCIONES DEL FORMULARIO ---
             $scope.buscarMateria = function () {
                 let clave = ($scope.form.CLAVE || "").toUpperCase();
                 let materia = $scope.catalogo.find(m => m.CLAVE === clave);
@@ -240,24 +313,6 @@
                     $scope.form.MATERIA = "";
                     $scope.form.DEPARTAMENTO = "";
                     $scope.form.CARGA = "";
-                }
-            };
-
-            $scope.actualizarPaginacion = function() {
-                $scope.totalPaginas = Math.ceil($scope.registros.length / $scope.registrosPorPagina);
-                if ($scope.totalPaginas === 0) $scope.totalPaginas = 1;
-                if ($scope.paginaActual > $scope.totalPaginas) $scope.paginaActual = $scope.totalPaginas;
-            };
-
-            $scope.paginaAnterior = function() {
-                if ($scope.paginaActual > 1) {
-                    $scope.paginaActual--;
-                }
-            };
-
-            $scope.paginaSiguiente = function() {
-                if ($scope.paginaActual < $scope.totalPaginas) {
-                    $scope.paginaActual++;
                 }
             };
 
@@ -275,9 +330,7 @@
                     if (r.IDENTIFICADOR.startsWith($scope.form.PROGRAMA)) {
                         let numeroStr = r.IDENTIFICADOR.replace($scope.form.PROGRAMA, "");
                         let numero = parseInt(numeroStr, 10);
-                        if (!isNaN(numero)) {
-                            maxId = Math.max(maxId, numero);
-                        }
+                        if (!isNaN(numero)) { maxId = Math.max(maxId, numero); }
                     }
                 });
 
@@ -297,7 +350,8 @@
                         MODALIDAD: "VIRTUAL",
                         CATEGORIA: "TEORIA",
                         COMENTARIOS: $scope.form.COMENTARIOS || "-",
-                        FECHA_REGISTRO: new Date().toLocaleString()
+                        FECHA_REGISTRO: new Date().toLocaleString(),
+                        REGISTRADO_POR: $scope.correoUsuario // <-- El correo validado va a Drive
                     };
 
                     $scope.registros.push(registro);
@@ -308,10 +362,8 @@
                 $scope.mostrarAlerta("Secciones registradas correctamente", "success");
                 
                 $scope.procesarResumen();
-                $scope.actualizarPaginacion(); // Actualizamos el total de páginas
-                
-                // Opcional: Mandar al usuario a la última página para que vea su nuevo registro
-                $scope.paginaActual = $scope.totalPaginas; 
+                $scope.actualizarPaginacion();
+                $scope.paginaActual = $scope.totalPaginas; // Mandamos a la última página para ver lo nuevo
 
                 $scope.cancelar();
             };
@@ -322,10 +374,12 @@
                 form.method = "POST";
                 form.action = url;
                 form.target = "hiddenFrame";
+                
                 let input = document.createElement("input");
                 input.type = "hidden";
                 input.name = "data";
                 input.value = JSON.stringify(data);
+                
                 form.appendChild(input);
                 document.body.appendChild(form);
                 form.submit();
@@ -341,16 +395,23 @@
                 };
             };
 
+            $scope.limpiarTabla = function () {
+                $scope.registros = [];
+            };
+
             $scope.exportarExcel = function () {
                 if ($scope.registros.length === 0) {
                     $scope.mostrarAlerta("No hay datos para exportar", "error");
                     return;
                 }
+
+                // Todas las 13 columnas se exportan a Excel
                 const columnasCompletas = [
                     "IDENTIFICADOR", "CLAVE", "MATERIA", "DEPARTAMENTO",
                     "CARGA", "PROGRAMA", "SEMESTRE", "CUPOS",
-                    "MODALIDAD", "CATEGORIA", "COMENTARIOS", "FECHA_REGISTRO"
+                    "MODALIDAD", "CATEGORIA", "COMENTARIOS", "FECHA_REGISTRO", "REGISTRADO_POR"
                 ];
+
                 let datos = $scope.registros.map(r => {
                     let fila = {};
                     columnasCompletas.forEach(col => {
@@ -368,10 +429,12 @@
                     });
                     return fila;
                 });
+
                 let ws = XLSX.utils.json_to_sheet(datos);
                 let wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "Secciones");
                 XLSX.writeFile(wb, "secciones_virtuales_2026B.xlsx");
+
                 $scope.mostrarAlerta("Excel exportado correctamente", "success");
             };
 
@@ -382,13 +445,31 @@
                 }, 3000);
             };
 
+            // --- LÓGICA DE PAGINACIÓN ---
+            $scope.actualizarPaginacion = function() {
+                $scope.totalPaginas = Math.ceil($scope.registros.length / $scope.registrosPorPagina);
+                if ($scope.totalPaginas === 0) $scope.totalPaginas = 1;
+                if ($scope.paginaActual > $scope.totalPaginas) $scope.paginaActual = $scope.totalPaginas;
+            };
+
+            $scope.paginaAnterior = function() {
+                if ($scope.paginaActual > 1) { $scope.paginaActual--; }
+            };
+
+            $scope.paginaSiguiente = function() {
+                if ($scope.paginaActual < $scope.totalPaginas) { $scope.paginaActual++; }
+            };
+
+            // --- LÓGICA DE GRÁFICOS ---
             $scope.procesarResumen = function() {
                 let agrupacion = {};
                 $scope.totalSeccionesResumen = 0;
                 $scope.totalCuposResumen = 0;
+                
                 $scope.programasPermitidos.forEach(p => {
                     agrupacion[p] = { programa: p, secciones: 0, cupos: 0 };
                 });
+                
                 $scope.registros.forEach(r => {
                     let p = r.PROGRAMA;
                     if (p && agrupacion[p]) {
@@ -399,6 +480,7 @@
                         $scope.totalCuposResumen += c;
                     }
                 });
+                
                 $scope.resumenDatos = Object.values(agrupacion);
                 $scope.dibujarGraficos();
             };
@@ -413,37 +495,35 @@
                     if(chartSec) chartSec.destroy();
                     if(chartCup) chartCup.destroy();
 
-                    let ctxSec = document.getElementById('chartSecciones').getContext('2d');
-                    chartSec = new Chart(ctxSec, {
-                        type: 'bar',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Secciones Programadas',
-                                data: dataSecciones,
-                                backgroundColor: '#3b82f6',
-                                borderRadius: 4
-                            }]
-                        },
-                        options: { responsive: true, plugins: { title: { display: true, text: 'Total Secciones por Programa' } } }
-                    });
+                    let ctxSec = document.getElementById('chartSecciones');
+                    if(ctxSec) {
+                        chartSec = new Chart(ctxSec.getContext('2d'), {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Secciones Programadas', data: dataSecciones, backgroundColor: '#3b82f6', borderRadius: 4
+                                }]
+                            },
+                            options: { responsive: true, plugins: { title: { display: true, text: 'Total Secciones por Programa' } } }
+                        });
+                    }
 
-                    let ctxCup = document.getElementById('chartCupos').getContext('2d');
-                    chartCup = new Chart(ctxCup, {
-                        type: 'doughnut',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                data: dataCupos,
-                                backgroundColor: coloresDona,
-                                borderWidth: 0
-                            }]
-                        },
-                        options: { responsive: true, plugins: { title: { display: true, text: 'Proporción de Cupos Globales' } } }
-                    });
+                    let ctxCup = document.getElementById('chartCupos');
+                    if(ctxCup) {
+                        chartCup = new Chart(ctxCup.getContext('2d'), {
+                            type: 'doughnut',
+                            data: {
+                                labels: labels,
+                                datasets: [{ data: dataCupos, backgroundColor: coloresDona, borderWidth: 0 }]
+                            },
+                            options: { responsive: true, plugins: { title: { display: true, text: 'Proporción de Cupos Globales' } } }
+                        });
+                    }
                 }, 100); 
             };
 
+            // --- CARGA DE DATOS ---
             $scope.cargarRegistros = function () {
                 const url = "https://script.google.com/macros/s/AKfycbw99qtTnoUwGZ5j6l1ZTAESWWNqTmGSiN3GZJI44VjcqB_2iOJzFH8HtogoamtLcygDnw/exec";
                 fetch(url)
@@ -451,29 +531,16 @@
                     .then(data => {
                         $scope.$apply(() => {
                             $scope.registros = data;
-                            $scope.actualizarPaginacion(); // Inicializa el total de páginas
+                            $scope.actualizarPaginacion(); 
                             $scope.procesarResumen(); 
                         });
                     })
                     .catch(err => console.log(err));
             };
 
-            $scope.cargarRegistros();
-
+            // Nota: Ya NO llamamos a cargarRegistros() aquí al final, 
+            // porque se llama dinámicamente al loguearse con éxito.
         });
     </script>
-
-    <footer class="text-center mt-10 p-6 text-gray-600">
-        <div class="flex justify-center gap-6 mb-3">
-            <img src="UDG.png" class="h-12">
-            <img src="CUGDL.png" class="h-12">
-        </div>
-        <p class="font-semibold">Universidad de Guadalajara</p>
-        <p>CUGDL</p>
-        <p class="text-sm mt-2">Desarrolado por la Coordinación de Programas Académicos</p>
-    </footer>
-
-    <iframe name="hiddenFrame" style="display:none;"></iframe>
-
 </body>
 </html>
