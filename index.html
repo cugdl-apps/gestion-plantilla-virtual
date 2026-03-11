@@ -245,7 +245,7 @@
                     console.log("2. Correo decodificado:", email);
 
                     // VALIDACIÓN DE DOMINIO: Aceptamos CUGDL y la red UdeG
-                    if(email.endsWith("@cugdl.udg.mx") || email.endsWith("@udg.mx") || email.endsWith("@alumnos.udg.mx") || email.endsWith("@gmail.com")) {
+                    if(email.endsWith("@cugdl.udg.mx") || email.endsWith("@gmail.com")) {
                         
                         $timeout(function() {
                             $scope.usuarioAutenticado = true;
@@ -273,7 +273,7 @@
             window.onload = function () {
                 google.accounts.id.initialize({
                     // ¡ASEGÚRATE DE PONER TU CLIENT ID AQUÍ DE NUEVO!
-                    client_id: "TU_CLIENT_ID_AQUI.apps.googleusercontent.com", 
+                    client_id: "918717903490-c11rpq9l7g8hq9phln457no1j379bsf5.apps.googleusercontent.com", 
                     callback: handleCredentialResponse
                 });
                 google.accounts.id.renderButton(
