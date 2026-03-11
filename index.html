@@ -227,16 +227,30 @@
             $scope.correoUsuario = "";
             $scope.errorLogin = null;
 
-            // --- PROCESAMIENTO DEL LOGIN ---
+// --- PROCESAMIENTO DEL LOGIN BLINDADO ---
             window.handleCredentialResponse = function(response) {
                 console.log("1. Token recibido de Google:", response);
 
+                // Evitamos que crashee si Google manda un evento intermedio sin credencial
+                if (!response || !response.credential) {
+                    console.log("Evento ignorado: No hay credencial.");
+                    return;
+                }
+
                 try {
-                    // Decodificación directa y segura del JWT
-                    const token = response.credential;
-                    const base64Url = token.split('.');
-                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                    // Decodificación directa forzando el formato String para evitar el TypeError
+                    const token = String(response.credential);
+                    const partes = token.split('.');
+                    
+                    if (partes.length !== 3) {
+                        throw new Error("El token no tiene el formato correcto.");
+                    }
+
+                    // Forzamos explícitamente a String antes de usar .replace()
+                    let base64Url = String(partes);
+                    let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    
+                    let jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
                         return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
                     }).join(''));
                     
@@ -262,9 +276,9 @@
                         });
                     }
                 } catch (err) {
-                    console.error("Error crítico al leer la cuenta:", err);
+                    console.error("Error crítico al procesar la cuenta:", err);
                     $timeout(function() {
-                        $scope.errorLogin = "Ocurrió un error al procesar tu inicio de sesión. Intenta de nuevo.";
+                        $scope.errorLogin = "Error técnico al leer tu cuenta. Intenta de nuevo.";
                     });
                 }
             };
